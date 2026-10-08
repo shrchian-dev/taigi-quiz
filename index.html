@@ -6,7 +6,7 @@
     <title>阮兜的早頓 - 閩南語互動闖關測驗</title>
     <!-- 引入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 引入 html2canvas 庫，用來將成績單區塊直接轉成圖檔 -->
+    <!-- 引入 html2canvas 庫 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         .grid-btn { transition: all 0.2s ease; }
@@ -49,7 +49,7 @@
             </div>
         </section>
 
-        <!-- 測驗主畫面（預設隱藏，填完資料才顯示） -->
+        <!-- 測驗主畫面 -->
         <section id="quizSection" class="bg-white p-6 rounded-2xl shadow-sm border border-amber-200 hidden">
             <div class="flex justify-between items-center mb-4 border-b pb-3">
                 <span id="progressText" class="text-sm font-bold text-amber-800 bg-amber-100 px-3 py-1 rounded-full">第 1 題 / 共 10 題</span>
@@ -66,27 +66,33 @@
 
         <!-- 成績結算與截圖區 -->
         <section id="submitSection" class="bg-white p-6 rounded-2xl shadow-sm border border-amber-200 text-center hidden">
-            <!-- 這塊區域會被自動轉成圖檔 -->
-            <div id="resultCard" class="bg-gradient-to-b from-amber-50 to-orange-50 p-6 rounded-2xl border-2 border-amber-300 mb-6 shadow-inner">
-                <h2 class="text-2xl font-bold text-amber-900 mb-2">🍳 《阮兜的早頓》闖關測驗成績單</h2>
-                <div id="studentResultInfo" class="text-lg font-bold text-slate-700 mb-4"></div>
-                <div class="bg-white py-4 px-6 rounded-xl inline-block shadow-sm border border-amber-200 mb-2">
-                    <p class="text-sm text-slate-500">最終得分</p>
-                    <p id="finalScoreNum" class="text-4xl font-extrabold text-amber-600">0 分</p>
+            <!-- 成績單卡片：使用純行內樣式確保 html2canvas 完美截圖 -->
+            <div id="resultCard" style="background-color: #fffbeb; padding: 30px; border-radius: 16px; border: 4px solid #f59e0b; margin-bottom: 24px; text-align: center;">
+                <h2 style="font-size: 24px; font-weight: bold; color: #78350f; margin-bottom: 8px;">🍳 《阮兜的早頓》闖關測驗成績單</h2>
+                <div id="studentResultInfo" style="font-size: 18px; font-weight: bold; color: #334155; margin-bottom: 16px;"></div>
+                
+                <div style="background-color: #ffffff; padding: 16px 32px; border-radius: 12px; display: inline-block; border: 2px solid #fde68a; margin-bottom: 16px;">
+                    <span style="font-size: 14px; color: #64748b; display: block; margin-bottom: 4px;">最終得分</span>
+                    <span id="finalScoreNum" style="font-size: 42px; font-weight: 900; color: #d97706;">0 分</span>
                 </div>
-                <p class="text-xs text-slate-400 mt-2">測驗完成時間：<span id="finishTime"></span></p>
+
+                <!-- 五組距正向回饋評語區 -->
+                <div id="feedbackBox" style="background-color: #fef3c7; padding: 16px; border-radius: 10px; border: 1px solid #fcd34d; color: #92400e; font-size: 15px; line-height: 1.6; font-weight: 600; margin-bottom: 12px;">
+                    <!-- 動態載入回饋 -->
+                </div>
+
+                <p style="font-size: 12px; color: #94a3b8; margin: 0;">測驗完成時間：<span id="finishTime"></span></p>
             </div>
 
             <button onclick="downloadScoreCard()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg text-lg w-full md:w-auto">
                 📥 下載我的成績單圖檔 (PNG)
             </button>
-            <p class="text-xs text-slate-500 mt-2">💡 學生點擊下載後，即可將有分數的圖檔繳交給老師查閱！</p>
+            <p class="text-xs text-slate-500 mt-2">💡 學生點擊下載後，即可將有分數與評語的圖檔繳交給老師查閱！</p>
         </section>
 
     </main>
 
     <script>
-        // 正確的 211 與 216 學生名單
         const studentData = {
             "211": [
                 "03 號 - 李承彥", "04 號 - 李宥錞", "05 號 - 林洧霆", "06 號 - 范綱荃", 
@@ -248,6 +254,21 @@
 
         function updateLiveScore() { document.getElementById("scoreText").innerText = `目前預估得分：${calculateScore()} 分`; }
 
+        // 五組距正向回饋評語產生器
+        function getFeedback(score) {
+            if (score >= 90) {
+                return "🌟【頂級總鋪師】太優秀了！您對閩南語詞彙、常民文化及轉折句型的掌握爐火純青，展現了極高的語言素養與文化共鳴！";
+            } else if (score >= 80) {
+                return "👏【特級總鋪師】表現十分亮眼！您對課文核心概念與在地飲食文化已有深刻理解，閩南語實力相當紮實，繼續保持！";
+            } else if (score >= 70) {
+                return "👍【資深小當家】表現穩健！您已經掌握了大部分的詞彙與句型結構，若能再多留意細節，定能更上一層樓！";
+            } else if (score >= 60) {
+                return "💪【潛力學徒】及格過關！看得出您有用心學習，對於基礎字詞已有概念，只要多複習幾次，一定能表現得更好！";
+            } else {
+                return "🌱【急先鋒起步】別氣餒！學習語言本來就需要時間累積。建議您可以再翻閱一下課本與生詞表，重新挑戰必定收穫滿滿！";
+            }
+        }
+
         function nextQuestion() {
             if (currentIndex < questions.length - 1) { currentIndex++; renderQuestion(); }
             else {
@@ -258,19 +279,18 @@
                 document.getElementById("quizSection").classList.add("hidden");
                 document.getElementById("submitSection").classList.remove("hidden");
 
-                // 填入成績單資訊
                 document.getElementById("studentResultInfo").innerText = `${sClass} 班   ${studentInfo}`;
                 document.getElementById("finalScoreNum").innerText = `${finalScore} 分`;
+                document.getElementById("feedbackBox").innerText = getFeedback(finalScore);
                 document.getElementById("finishTime").innerText = new Date().toLocaleString();
             }
         }
 
         function prevQuestion() { if (currentIndex > 0) { currentIndex--; renderQuestion(); } }
 
-        // 一鍵將成績單區塊轉成圖檔並下載
         function downloadScoreCard() {
             const card = document.getElementById("resultCard");
-            html2canvas(card, { scale: 2 }).then(canvas => {
+            html2canvas(card, { scale: 2, backgroundColor: "#fffbeb" }).then(canvas => {
                 const link = document.createElement("a");
                 link.download = `阮兜的早頓_成績單.png`;
                 link.href = canvas.toDataURL("image/png");
