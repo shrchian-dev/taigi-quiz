@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>阮兜的早頓 - 閩南語互動闖關測驗</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 html2canvas 庫，用來將成績單區塊直接轉成圖檔 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        .grid-btn { transition: all 0.2s ease; }
+        .grid-btn.selected { background-color: #d97706 !important; color: white !important; border-color: #b45309 !important; }
+        .multi-btn.selected { background-color: #0284c7 !important; color: white !important; border-color: #0369a1 !important; }
+    </style>
+</head>
+<body class="bg-amber-50 text-slate-800 font-sans">
+
+    <header class="bg-amber-600 text-white shadow-md py-4 px-6 text-center">
+        <h1 class="text-2xl font-bold">🍳 阮兜的早頓：閩南語互動闖關測驗（共10題）</h1>
+        <p class="text-sm text-amber-100 mt-1">高中國文 / 閩南語課程概念與詞彙學習</p>
+    </header>
+
+    <main class="max-w-2xl mx-auto p-4 md:p-6 space-y-6">
+
+        <!-- 步驟 1：學生基本資料 -->
+        <section id="infoSection" class="bg-white p-5 rounded-2xl shadow-sm border border-amber-200">
+            <h2 class="text-lg font-bold text-amber-800 mb-3 flex items-center">
+                <span class="bg-amber-100 text-amber-800 p-1 rounded mr-2 text-sm">步驟 1</span> 學生班號姓名填寫
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">選擇班級</label>
+                    <select id="studentClass" onchange="updateStudentList()" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-amber-500 font-medium">
+                        <option value="">請選擇班級</option>
+                        <option value="211">211 班</option>
+                        <option value="216">216 班</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">選擇座號與姓名</label>
+                    <select id="studentSelect" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-amber-500 font-medium">
+                        <option value="">請先選擇班級</option>
+                    </select>
+                </div>
+            </div>
+            <div class="mt-4 text-center">
+                <button onclick="startQuiz()" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-6 rounded-xl shadow">開始作答 🚀</button>
+            </div>
+        </section>
+
+        <!-- 測驗主畫面（預設隱藏，填完資料才顯示） -->
+        <section id="quizSection" class="bg-white p-6 rounded-2xl shadow-sm border border-amber-200 hidden">
+            <div class="flex justify-between items-center mb-4 border-b pb-3">
+                <span id="progressText" class="text-sm font-bold text-amber-800 bg-amber-100 px-3 py-1 rounded-full">第 1 題 / 共 10 題</span>
+                <span id="scoreText" class="text-sm font-bold text-emerald-700">目前累計得分：0 分</span>
+            </div>
+
+            <div id="questionContainer"></div>
+
+            <div class="flex justify-between mt-6 pt-4 border-t">
+                <button id="prevBtn" onclick="prevQuestion()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2 px-6 rounded-xl hidden">⬅️ 上一題</button>
+                <button id="nextBtn" onclick="nextQuestion()" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-6 rounded-xl ml-auto">下一題 ➡️</button>
+            </div>
+        </section>
+
+        <!-- 成績結算與截圖區 -->
+        <section id="submitSection" class="bg-white p-6 rounded-2xl shadow-sm border border-amber-200 text-center hidden">
+            <!-- 這塊區域會被自動轉成圖檔 -->
+            <div id="resultCard" class="bg-gradient-to-b from-amber-50 to-orange-50 p-6 rounded-2xl border-2 border-amber-300 mb-6 shadow-inner">
+                <h2 class="text-2xl font-bold text-amber-900 mb-2">🍳 《阮兜的早頓》闖關測驗成績單</h2>
+                <div id="studentResultInfo" class="text-lg font-bold text-slate-700 mb-4"></div>
+                <div class="bg-white py-4 px-6 rounded-xl inline-block shadow-sm border border-amber-200 mb-2">
+                    <p class="text-sm text-slate-500">最終得分</p>
+                    <p id="finalScoreNum" class="text-4xl font-extrabold text-amber-600">0 分</p>
+                </div>
+                <p class="text-xs text-slate-400 mt-2">測驗完成時間：<span id="finishTime"></span></p>
+            </div>
+
+            <button onclick="downloadScoreCard()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg text-lg w-full md:w-auto">
+                📥 下載我的成績單圖檔 (PNG)
+            </button>
+            <p class="text-xs text-slate-500 mt-2">💡 學生點擊下載後，即可將有分數的圖檔繳交給老師查閱！</p>
+        </section>
+
+    </main>
+
+    <script>
+        // 正確的 211 與 216 學生名單
+        const studentData = {
+            "211": [
+                "03 號 - 李承彥", "04 號 - 李宥錞", "05 號 - 林洧霆", "06 號 - 范綱荃", 
+                "07 號 - 徐緯承", "08 號 - 商芫程", "09 號 - 郭字軒", "10 號 - 陳弘仁", 
+                "11 號 - 陳奕勳", "12 號 - 陳昱齊", "13 號 - 陳哲立", "14 號 - 曾令宏", 
+                "15 號 - 黃玉豐", "16 號 - 廖鈺辰", "17 號 - 林璞方", "19 號 - 秦禎翊", 
+                "21 號 - 郭湘婷", "22 號 - 陳芊霈", "24 號 - 陳紫彤", "27 號 - 黃佳茹", 
+                "29 號 - 葉予歆", "30 號 - 廖芳雅", "31 號 - 鄭羽均", "34 號 - 顏于瑄"
+            ],
+            "216": [
+                "01 號 - 李睿", "02 號 - 卓鈞翌", "03 號 - 柯又誠", "04 號 - 范姜培銘", 
+                "05 號 - 張廷安", "06 號 - 梁朕岳", "07 號 - 盛致恆", "08 號 - 莊昊叡", 
+                "09 號 - 陳又維", "10 號 - 陳致軒", "11 號 - 劉奕均", "12 號 - 丁聿庭", 
+                "15 號 - 江齊恩", "16 號 - 吳孟昀", "18 號 - 吳書伃", "19 號 - 吳純鈺", 
+                "20 號 - 吳憬涵", "21 號 - 呂婕菱", "22 號 - 呂鳳翎", "23 號 - 李卉欣", 
+                "25 號 - 高巧津", "26 號 - 高立恩", "27 號 - 張心瀠", "29 號 - 許淨涵", 
+                "30 號 - 陳美妃", "31 號 - 彭楚庭", "32 號 - 曾宥嘉", "33 號 - 黃靖婷", 
+                "35 號 - 葉羽寧", "36 號 - 蔡旻珊", "37 號 - 繆宛佑", "38 號 - 薛宇婕"
+            ]
+        };
+
+        function updateStudentList() {
+            const classSelect = document.getElementById("studentClass");
+            const studentSelect = document.getElementById("studentSelect");
+            const selectedClass = classSelect.value;
+            studentSelect.innerHTML = '<option value="">請選擇座號與姓名</option>';
+            if (selectedClass && studentData[selectedClass]) {
+                studentData[selectedClass].forEach(student => {
+                    const option = document.createElement("option");
+                    option.value = student;
+                    option.text = student;
+                    studentSelect.appendChild(option);
+                });
+            }
+        }
+
+        function startQuiz() {
+            const sClass = document.getElementById("studentClass").value;
+            const studentInfo = document.getElementById("studentSelect").value;
+            if (!sClass || !studentInfo) {
+                alert("請先完整選擇您的「班級」與「座號姓名」才能開始作答！");
+                return;
+            }
+            document.getElementById("infoSection").classList.add("hidden");
+            document.getElementById("quizSection").classList.remove("hidden");
+            renderQuestion();
+        }
+
+        const questions = [
+            { type: "grid33", prompt: "【第 1 題】請在 3×3 九宮格中找出形容人「挑嘴、對食物挑剔」的詞彙：", target: "歹喙斗", grid: ["歹喙斗", "好喙", "糜", "蔭瓜仔", "開脾", "紲喙", "面憂面結", "冤家量債", "稀微"] },
+            { type: "grid33", prompt: "【第 2 題】請找出形容人「愁眉苦臉」的詞彙：", target: "面憂面結", grid: ["俗麭", "面憂面結", "大陣", "作穡", "食食", "翁某", "噤喙", "飫喙", "銀角仔"] },
+            { type: "grid33", prompt: "【第 3 題】請找出形容食物「合口味、一口接一口」的詞彙：", target: "紲喙", grid: ["冤家量債", "開脾", "紲喙", "歹喙斗", "蔭瓜仔", "糜", "好喙", "轉骨", "稀微"] },
+            { type: "grid33", prompt: "【第 4 題】請找出形容夫妻「吵架、爭吵不停」的詞彙：", target: "冤家量債", grid: ["翁婿", "數念", "冤家量債", "油炸粿", "菜頭粿", "坩", "扒", "醬菜", "僫"] },
+            { type: "grid44_multi", prompt: "【第 5 題】請從下列 4×4 格子中選出與「情緒」有關的詞彙（複選，共 2 個）：", targets: ["面憂面結", "稀微"], grid: ["面憂面結", "歹喙斗", "開脾", "稀微", "作穡", "銀角仔", "俗麭", "蔭瓜仔", "轉骨", "食食", "翁婿", "醬菜", "大陣", "坩", "扒", "僫"], userAnswers: [] },
+            { type: "multi", prompt: "【第 6 題】下面詞彙中，哪幾個”喙”字是佮人講話有關係？（複選，共 3 個）", options: ["空喙", "覕喙", "喙齒根", "好喙", "盤喙花", "咬喙", "佮喙", "飫喙", "漉喙", "拍喙鼓", "紲喙", "喙箍", "喙瀾", "喙焦喉渴", "喙罨", "喙舌"], targets: ["好喙", "盤喙花", "拍喙鼓"], userAnswers: [] },
+            { type: "multi", prompt: "【第 7 題】台灣傳統菜市場口常見的傳統重口味「台味早頓」，包含下列哪些品項？（複選，共 3 個）", options: ["俗麭配牛奶", "美國割包配紅茶", "豆奶配油炸粿", "米粉炒配豬血湯", "牛肉湯配肉燥飯", "肉羹麵", "番薯糜配醬菜", "俗麭𩛩配牛奶"], targets: ["米粉炒配豬血湯", "牛肉湯配肉燥飯", "肉羹麵"], userAnswers: [] },
+            { type: "short", prompt: "【第 8 題】請寫出佮「銀角仔」意思相仝的台語詞：", target: ["銅仙", "銅鐳", "銅錢", "零星", "小票"], userAnswer: "" },
+            { type: "short", prompt: "【第 9 題】青少年在成長發育期間漸漸打開胃口、食量大增，台語會將這種增進食慾的現象稱為「             」（khui-pî）：", target: ["開脾"], userAnswer: "" },
+            { type: "short", prompt: "【第 10 題】轉折句型挑戰：「原底……，毋過……」。請以閩語漢字模仿造句（例如：原底我無愛食白糜配蔭瓜仔，毋過食了發覺真有滋味）：", target: ["原底", "毋過"], userAnswer: "" }
+        ];
+
+        let currentIndex = 0;
+        let userChoices = new Array(questions.length).fill(null);
+
+        function renderQuestion() {
+            const q = questions[currentIndex];
+            const container = document.getElementById("questionContainer");
+            document.getElementById("progressText").innerText = `第 ${currentIndex + 1} 題 / 共 ${questions.length} 題`;
+            
+            let html = `<p class="text-lg font-semibold text-slate-800 mb-4">${q.prompt}</p>`;
+
+            if (q.type === "grid33") {
+                html += `<div class="grid grid-cols-3 gap-3 max-w-md mx-auto mb-4">`;
+                for (let i = 0; i < 9; i++) {
+                    const word = q.grid[i];
+                    const isSelected = userChoices[currentIndex] === word ? "selected" : "";
+                    html += `<button onclick="selectGrid33(${i}, '${word}')" id="g33-${i}" class="grid-btn h-16 text-lg font-bold border-2 border-amber-300 rounded-xl bg-amber-50 hover:bg-amber-100 ${isSelected}">${word}</button>`;
+                }
+                html += `</div>`;
+            } else if (q.type === "grid44_multi") {
+                html += `<p class="text-xs text-slate-500 mb-2">請點擊選出 2 個正確選項：</p>`;
+                html += `<div class="grid grid-cols-4 gap-2 max-w-lg mx-auto mb-4">`;
+                if(!q.userAnswers) q.userAnswers = [];
+                for (let i = 0; i < 16; i++) {
+                    const word = q.grid[i];
+                    const isSelected = q.userAnswers.includes(word) ? "selected" : "";
+                    html += `<button onclick="toggleGrid44('${word}')" class="multi-btn h-14 text-sm font-bold border-2 border-sky-300 rounded-xl bg-sky-50 hover:bg-sky-100 text-slate-800 ${isSelected}">${word}</button>`;
+                }
+                html += `</div>`;
+            } else if (q.type === "multi") {
+                html += `<div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">`;
+                if(!q.userAnswers) q.userAnswers = [];
+                q.options.forEach(opt => {
+                    const isSelected = q.userAnswers.includes(opt) ? "selected" : "";
+                    html += `<button onclick="toggleMulti('${opt}')" class="multi-btn p-3 text-sm font-medium border-2 border-sky-300 rounded-xl bg-sky-50 hover:bg-sky-100 text-slate-800 text-center ${isSelected}">${opt}</button>`;
+                });
+                html += `</div>`;
+            } else if (q.type === "short") {
+                const val = q.userAnswer || "";
+                html += `<textarea rows="3" oninput="updateShortAnswer(this.value)" class="w-full border border-slate-300 rounded-lg p-3 focus:ring-2 focus:ring-amber-500" placeholder="請在此輸入您的答案...">${val}</textarea>`;
+            }
+
+            container.innerHTML = html;
+            document.getElementById("prevBtn").classList.toggle("hidden", currentIndex === 0);
+            document.getElementById("nextBtn").innerText = (currentIndex === questions.length - 1) ? "查看總成績 🏁" : "下一題 ➡️";
+            updateLiveScore();
+        }
+
+        function selectGrid33(idx, word) {
+            userChoices[currentIndex] = word;
+            for(let i=0; i<9; i++) {
+                const btn = document.getElementById(`g33-${i}`);
+                if(btn) btn.classList.remove("selected");
+            }
+            document.getElementById(`g33-${idx}`).classList.add("selected");
+            updateLiveScore();
+        }
+
+        function toggleGrid44(word) {
+            const q = questions[currentIndex];
+            if(!q.userAnswers) q.userAnswers = [];
+            const idx = q.userAnswers.indexOf(word);
+            if(idx > -1) q.userAnswers.splice(idx, 1);
+            else { if(q.userAnswers.length < 2) q.userAnswers.push(word); else alert("本題最多只能選擇 2 個選項！"); }
+            renderQuestion();
+        }
+
+        function toggleMulti(opt) {
+            const q = questions[currentIndex];
+            if(!q.userAnswers) q.userAnswers = [];
+            const idx = q.userAnswers.indexOf(opt);
+            if(idx > -1) q.userAnswers.splice(idx, 1);
+            else { if(q.userAnswers.length < 3) q.userAnswers.push(opt); else alert("本題最多只能選擇 3 個選項！"); }
+            renderQuestion();
+        }
+
+        function updateShortAnswer(val) { questions[currentIndex].userAnswer = val; }
+
+        function calculateScore() {
+            let score = 0;
+            const pointsPerQ = 10;
+            questions.forEach((q, idx) => {
+                if (q.type === "grid33") {
+                    if (userChoices[idx] === q.target) score += pointsPerQ;
+                } else if (q.type === "grid44_multi" || q.type === "multi") {
+                    const userSel = q.userAnswers || [];
+                    const correctSet = q.targets;
+                    const matchCount = userSel.filter(item => correctSet.includes(item)).length;
+                    if (matchCount === correctSet.length && userSel.length === correctSet.length) score += pointsPerQ;
+                } else if (q.type === "short") {
+                    const ans = (q.userAnswer || "").trim();
+                    if (idx === 7 && q.target.some(t => ans.includes(t))) score += pointsPerQ;
+                    else if (idx === 8 && ans.includes("開脾")) score += pointsPerQ;
+                    else if (idx === 9 && ans.includes("原底") && ans.includes("毋過")) score += pointsPerQ;
+                }
+            });
+            return score;
+        }
+
+        function updateLiveScore() { document.getElementById("scoreText").innerText = `目前預估得分：${calculateScore()} 分`; }
+
+        function nextQuestion() {
+            if (currentIndex < questions.length - 1) { currentIndex++; renderQuestion(); }
+            else {
+                const sClass = document.getElementById("studentClass").value;
+                const studentInfo = document.getElementById("studentSelect").value;
+                const finalScore = calculateScore();
+
+                document.getElementById("quizSection").classList.add("hidden");
+                document.getElementById("submitSection").classList.remove("hidden");
+
+                // 填入成績單資訊
+                document.getElementById("studentResultInfo").innerText = `${sClass} 班   ${studentInfo}`;
+                document.getElementById("finalScoreNum").innerText = `${finalScore} 分`;
+                document.getElementById("finishTime").innerText = new Date().toLocaleString();
+            }
+        }
+
+        function prevQuestion() { if (currentIndex > 0) { currentIndex--; renderQuestion(); } }
+
+        // 一鍵將成績單區塊轉成圖檔並下載
+        function downloadScoreCard() {
+            const card = document.getElementById("resultCard");
+            html2canvas(card, { scale: 2 }).then(canvas => {
+                const link = document.createElement("a");
+                link.download = `阮兜的早頓_成績單.png`;
+                link.href = canvas.toDataURL("image/png");
+                link.click();
+            });
+        }
+    </script>
+</body>
+</html>
